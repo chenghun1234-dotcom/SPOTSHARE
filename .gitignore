@@ -2,3 +2,14 @@ firebase_functions/node_modules/
 rules_tests/node_modules/
 firebase-debug.log
 .migration_key.tmp
+
+# Firebase emulator logs
+firestore-debug.log
+ui-debug.log
+
+# Local auth export artifacts
+auth_users_check.json
+
+# Firebase service account keys (never commit)
+service-account.json
+*-firebase-adminsdk-*.json
