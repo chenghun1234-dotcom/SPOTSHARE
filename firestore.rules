@@ -17,6 +17,26 @@ service cloud.firestore {
       return request.resource.data[fieldName] == resource.data[fieldName];
     }
 
+    function ownsSpot(spotId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/parking_spots/$(spotId))
+        && get(/databases/$(database)/documents/parking_spots/$(spotId)).data.ownerId == request.auth.uid;
+    }
+
+    function validAdRequestCreate() {
+      return request.resource.data.keys().hasAll(['userId', 'spotId', 'durationDays', 'amount', 'depositCode', 'status'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.spotId is string
+        && request.resource.data.durationDays is int
+        && request.resource.data.durationDays > 0
+        && request.resource.data.amount is int
+        && request.resource.data.amount > 0
+        && request.resource.data.depositCode is string
+        && request.resource.data.depositCode.size() >= 4
+        && request.resource.data.status == 'pending'
+        && ownsSpot(request.resource.data.spotId);
+    }
+
     match /parking_spots/{spotId} {
       allow read: if true;
 
@@ -63,8 +83,7 @@ service cloud.firestore {
     match /ad_requests/{adRequestId} {
       allow read: if resource.data.status == 'active' || isAdmin();
 
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validAdRequestCreate();
 
       allow update, delete: if isAdmin();
     }

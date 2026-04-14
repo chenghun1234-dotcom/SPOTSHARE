@@ -7,6 +7,8 @@ import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:math';
 import '../models/parking_spot.dart';
+import 'admin_dashboard.dart';
+import 'host_dashboard.dart';
 import '../widgets/web_kakao_map.dart';
 import '../widgets/parking_detail_card.dart';
 
@@ -108,11 +110,35 @@ class _MapScreenState extends State<MapScreen> {
     return R * 2 * asin(sqrt(a));
   }
 
+  List<Widget> _buildNavActions() {
+    return [
+      TextButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const HostDashboard()),
+          );
+        },
+        child: const Text('호스트', style: TextStyle(color: Colors.white)),
+      ),
+      TextButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+          );
+        },
+        child: const Text('관리자', style: TextStyle(color: Colors.white)),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
       return Scaffold(
-        appBar: AppBar(title: Text('스팟쉐어 지도')),
+        appBar: AppBar(
+          title: const Text('스팟쉐어 지도'),
+          actions: _buildNavActions(),
+        ),
         body: Stack(
           children: [
             WebKakaoMap(
@@ -134,7 +160,10 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('스팟쉐어 지도')),
+      appBar: AppBar(
+        title: const Text('스팟쉐어 지도'),
+        actions: _buildNavActions(),
+      ),
       body: Stack(
         children: [
           KakaoMap(

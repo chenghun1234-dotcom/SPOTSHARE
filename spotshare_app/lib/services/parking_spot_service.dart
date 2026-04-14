@@ -54,4 +54,12 @@ class ParkingSpotService {
       snapshot.docs.map((doc) => ParkingSpot.fromJson(doc.data())).toList()
     );
   }
+
+  Stream<List<ParkingSpot>> getMySpotsStream() {
+    final uid = _requireUserId();
+    return spotsRef
+      .where('ownerId', isEqualTo: uid)
+      .snapshots()
+      .map((snapshot) => snapshot.docs.map((doc) => ParkingSpot.fromJson(doc.data())).toList());
+  }
 }
