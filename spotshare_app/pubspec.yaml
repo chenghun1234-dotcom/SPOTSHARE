@@ -1,0 +1,22 @@
+name: spotshare_app
+
+environment:
+  sdk: '^3.11.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_dotenv: ^5.2.1
+  url_launcher: ^6.2.5
+  cloud_firestore: ^4.9.2
+  firebase_core: ^2.24.2
+  firebase_storage: ^11.6.6
+  firebase_messaging: ^14.7.10
+  image_picker: ^1.0.7
+  kakao_map_plugin: ^0.3.7
+
+flutter:
+  assets:
+    - .env
+
+# 기타 필요한 패키지는 실제 프로젝트에 맞게 추가

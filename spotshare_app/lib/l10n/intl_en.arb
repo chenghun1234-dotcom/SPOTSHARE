@@ -1,0 +1,13 @@
+{
+  "parking_spot": "Parking Spot",
+  "premium": "Premium Ad",
+  "public": "Public Parking",
+  "private": "Private/Shared",
+  "address": "Address",
+  "price_per_hour": "{price} KRW/hour",
+  "price_per_day": "{price} KRW/day",
+  "price_per_month": "{price} KRW/month",
+  "penalty_notice": "After reservation ends, {penalty} KRW per {unit} penalty applies if not checked out.",
+  "checkout": "Checkout",
+  "reserve": "Reserve/Pay Now"
+}

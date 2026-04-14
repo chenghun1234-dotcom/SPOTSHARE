@@ -1,0 +1,13 @@
+{
+  "parking_spot": "주차장",
+  "premium": "프리미엄 광고",
+  "public": "공영주차장",
+  "private": "개인/공유",
+  "address": "주소",
+  "price_per_hour": "시간당 {price}원",
+  "price_per_day": "일당 {price}원",
+  "price_per_month": "월당 {price}원",
+  "penalty_notice": "예약 종료 후 미출차 시 {unit}당 {penalty}원 할증",
+  "checkout": "출차 인증",
+  "reserve": "즉시 예약/송금"
+}

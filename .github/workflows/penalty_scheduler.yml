@@ -1,0 +1,21 @@
+name: Penalty Scheduler
+on:
+  schedule:
+    - cron: '*/10 * * * *' # 10분마다
+  workflow_dispatch:
+
+jobs:
+  penalty:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+      - name: Run Penalty Service
+        run: |
+          cd spotshare_app
+          node penalty_service.js
