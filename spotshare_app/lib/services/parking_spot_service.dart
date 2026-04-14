@@ -1,11 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/parking_spot.dart';
 
 class ParkingSpotService {
   final spotsRef = FirebaseFirestore.instance.collection('parking_spots');
 
+  String _requireUserId() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('Authentication required to create a parking spot.');
+    }
+    return user.uid;
+  }
+
   Future<void> addSpot(ParkingSpot spot) async {
+    final ownerId = _requireUserId();
     await spotsRef.doc(spot.id).set({
+      'ownerId': ownerId,
       'region': spot.region,
       'title': spot.title,
       'price': spot.price,

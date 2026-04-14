@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "spotshare-5103d",
+    "prod": "spotshare-5103d"
+  }
+}

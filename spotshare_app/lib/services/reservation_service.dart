@@ -1,10 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReservationService {
   final reservationsRef = FirebaseFirestore.instance.collection('reservations');
 
+  String _requireUserId() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('Authentication required to create a reservation.');
+    }
+    return user.uid;
+  }
+
   Future<void> createReservation(Map<String, dynamic> data) async {
-    await reservationsRef.add(data);
+    final payload = Map<String, dynamic>.from(data);
+    payload['userId'] = _requireUserId();
+    await reservationsRef.add(payload);
   }
 
   Future<void> cancelReservation(String id) async {

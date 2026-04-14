@@ -1,0 +1,4 @@
+firebase_functions/node_modules/
+rules_tests/node_modules/
+firebase-debug.log
+.migration_key.tmp

@@ -1,0 +1,12 @@
+{
+  "name": "spotshare-rules-tests",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test:firestore-rules": "node firestore_rules_smoke_test.js"
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.14.1"
+  }
+}

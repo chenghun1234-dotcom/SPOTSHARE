@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwnerField(data, fieldName) {
+      return signedIn() && data[fieldName] == request.auth.uid;
+    }
+
+    function unchanged(fieldName) {
+      return request.resource.data[fieldName] == resource.data[fieldName];
+    }
+
+    match /parking_spots/{spotId} {
+      allow read: if true;
+
+      allow create: if isAdmin() || isOwnerField(request.resource.data, 'ownerId');
+
+      allow update: if isAdmin()
+        || (isOwnerField(resource.data, 'ownerId')
+          && unchanged('ownerId'));
+
+      allow delete: if isAdmin() || isOwnerField(resource.data, 'ownerId');
+    }
+
+    match /reservations/{reservationId} {
+      allow read: if isAdmin()
+        || isOwnerField(resource.data, 'userId')
+        || isOwnerField(resource.data, 'ownerId');
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update: if isAdmin()
+        || (isOwnerField(resource.data, 'userId') && unchanged('userId'))
+        || (isOwnerField(resource.data, 'ownerId') && unchanged('userId'));
+
+      allow delete: if isAdmin() || isOwnerField(resource.data, 'userId');
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if isAdmin() || isOwnerField(resource.data, 'userId');
+    }
+
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /ad_requests/{adRequestId} {
+      allow read: if resource.data.status == 'active' || isAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
