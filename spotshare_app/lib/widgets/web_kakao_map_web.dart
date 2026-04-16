@@ -1,14 +1,23 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
 
 import 'dart:async';
-import 'dart:html' as html;
-import 'dart:js_util' as js_util;
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:ui_web' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../models/parking_spot.dart';
+
+@JS('kakao')
+external JSObject? get kakao;
+
+// Helper to handle simple constructor calls via JS Function evaluation
+// as a safe workaround for dynamic constructors in dart:js_interop
+@JS('eval')
+external JSObject jsEval(JSString code);
 
 class WebKakaoMap extends StatefulWidget {
   final List<ParkingSpot> spots;
@@ -28,15 +37,15 @@ class _WebKakaoMapState extends State<WebKakaoMap> {
   static Completer<void>? _sdkLoadCompleter;
   static bool _sdkScriptRequested = false;
 
-  final html.DivElement _mapElement = html.DivElement()
+  final web.HTMLDivElement _mapElement = web.document.createElement('div') as web.HTMLDivElement
     ..style.width = '100%'
     ..style.height = '100%';
 
   late final String _viewType;
 
-  dynamic _maps;
-  dynamic _map;
-  final List<dynamic> _markerRefs = <dynamic>[];
+  JSObject? _maps;
+  JSObject? _map;
+  final List<JSObject> _markerRefs = [];
 
   String? _errorMessage;
 
@@ -63,24 +72,18 @@ class _WebKakaoMapState extends State<WebKakaoMap> {
     final kakaoJsKey = dotenv.env['KAKAO_JS_KEY'] ?? const String.fromEnvironment('KAKAO_JS_KEY', defaultValue: '');
     if (kakaoJsKey.isEmpty) {
       setState(() {
-        _errorMessage = 'KAKAO_JS_KEY가 설정되지 않았습니다. spotshare_app/.env에 값을 넣거나 --dart-define=KAKAO_JS_KEY=YOUR_KEY 를 추가하세요.';
+        _errorMessage = 'KAKAO_JS_KEY가 설정되지 않았습니다. spotshare_app/.env를 확인하세요.';
       });
       return;
     }
 
     try {
       await _loadSdk(kakaoJsKey);
-      final kakao = js_util.getProperty(html.window, 'kakao');
-      _maps = js_util.getProperty(kakao, 'maps');
+      _maps = kakao?.getProperty<JSObject>('maps'.toJS);
 
-      js_util.callMethod(
-        _maps,
-        'load',
-        <dynamic>[
-          js_util.allowInterop(() {
-            _createMap();
-          }),
-        ],
+      _maps?.callMethod(
+        'load'.toJS,
+        (() => _createMap()).toJS,
       );
     } catch (e) {
       setState(() {
@@ -99,23 +102,23 @@ class _WebKakaoMapState extends State<WebKakaoMap> {
     if (!_sdkScriptRequested) {
       _sdkScriptRequested = true;
 
-      final html.ScriptElement script = html.ScriptElement()
+      final web.HTMLScriptElement script = web.document.createElement('script') as web.HTMLScriptElement
         ..async = true
         ..src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=$kakaoJsKey&autoload=false';
 
-      script.onLoad.listen((_) {
+      script.onload = ((web.Event _) {
         if (!_sdkLoadCompleter!.isCompleted) {
           _sdkLoadCompleter!.complete();
         }
-      });
+      }).toJS;
 
-      script.onError.listen((_) {
+      script.onerror = ((web.Event _) {
         if (!_sdkLoadCompleter!.isCompleted) {
           _sdkLoadCompleter!.completeError('SDK script load error');
         }
-      });
+      }).toJS;
 
-      html.document.head?.append(script);
+      web.document.head?.appendChild(script);
     }
 
     return _sdkLoadCompleter!.future;
@@ -125,52 +128,51 @@ class _WebKakaoMapState extends State<WebKakaoMap> {
     final double centerLat = widget.spots.isNotEmpty ? widget.spots.first.lat : 37.5665;
     final double centerLng = widget.spots.isNotEmpty ? widget.spots.first.lng : 126.9780;
 
-    final dynamic latLngConstructor = js_util.getProperty(_maps, 'LatLng');
-    final dynamic mapConstructor = js_util.getProperty(_maps, 'Map');
+    final JSObject? center = jsEval('new kakao.maps.LatLng($centerLat, $centerLng)'.toJS);
 
-    final dynamic center = js_util.callConstructor(latLngConstructor, <dynamic>[centerLat, centerLng]);
+    final JSObject options = JSObject();
+    if (center != null) options.setProperty('center'.toJS, center);
+    options.setProperty('level'.toJS, 4.toJS);
 
-    final dynamic options = js_util.jsify(<String, dynamic>{
-      'center': center,
-      'level': 4,
-    });
+    // Call constructor dynamically using js_interop safe invocation
+    // A trick when constructors are hard to declare: assign object to window, then instatiate JS.
+    globalContext.setProperty('__tempMapContainer'.toJS, _mapElement as JSObject);
+    globalContext.setProperty('__tempMapOptions'.toJS, options);
+    _map = jsEval('new kakao.maps.Map(window.__tempMapContainer, window.__tempMapOptions)'.toJS);
 
-    _map = js_util.callConstructor(mapConstructor, <dynamic>[_mapElement, options]);
     _renderMarkers();
   }
 
   void _renderMarkers() {
-    final dynamic markerConstructor = js_util.getProperty(_maps, 'Marker');
-    final dynamic latLngConstructor = js_util.getProperty(_maps, 'LatLng');
-    final dynamic eventNamespace = js_util.getProperty(_maps, 'event');
+    final JSObject? eventNamespace = _maps?.getProperty<JSObject>('event'.toJS);
 
-    for (final dynamic marker in _markerRefs) {
-      js_util.callMethod(marker, 'setMap', <dynamic>[null]);
+    for (final marker in _markerRefs) {
+      marker.callMethod('setMap'.toJS, null);
     }
     _markerRefs.clear();
 
     for (final ParkingSpot spot in widget.spots) {
-      final dynamic position = js_util.callConstructor(latLngConstructor, <dynamic>[spot.lat, spot.lng]);
-      final dynamic markerOptions = js_util.jsify(<String, dynamic>{
-        'position': position,
-      });
+      final JSObject? position = jsEval('new kakao.maps.LatLng(${spot.lat}, ${spot.lng})'.toJS);
+      
+      final JSObject markerOptions = JSObject();
+      if (position != null) markerOptions.setProperty('position'.toJS, position);
 
-      final dynamic marker = js_util.callConstructor(markerConstructor, <dynamic>[markerOptions]);
-      js_util.callMethod(marker, 'setMap', <dynamic>[_map]);
+      globalContext.setProperty('__tempMarkerOptions'.toJS, markerOptions);
+      final JSObject? marker = jsEval('new kakao.maps.Marker(window.__tempMarkerOptions)'.toJS);
+      
+      if (marker != null) {
+        marker.callMethod('setMap'.toJS, _map);
 
-      js_util.callMethod(
-        eventNamespace,
-        'addListener',
-        <dynamic>[
+        eventNamespace?.callMethod(
+          'addListener'.toJS,
+          // Convert arguments properly if needed, but JSObject can be passed directly.
           marker,
-          'click',
-          js_util.allowInterop(() {
-            widget.onSpotTap?.call(spot);
-          }),
-        ],
-      );
+          'click'.toJS,
+          (() => widget.onSpotTap?.call(spot)).toJS,
+        );
 
-      _markerRefs.add(marker);
+        _markerRefs.add(marker);
+      }
     }
   }
 

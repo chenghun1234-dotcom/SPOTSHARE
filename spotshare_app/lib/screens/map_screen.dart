@@ -5,10 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:math';
 import '../models/parking_spot.dart';
 import 'admin_dashboard.dart';
 import 'host_dashboard.dart';
+import 'login_screen.dart';
+import '../services/auth_service.dart';
 import '../widgets/web_kakao_map.dart';
 import '../widgets/parking_detail_card.dart';
 
@@ -86,17 +90,26 @@ class _MapScreenState extends State<MapScreen> {
 
   // 위치 기반 푸시: 강남역(예시) 반경 500m 진입 시 알림
   Future<void> _initLocationPush() async {
-    // 실제 서비스에서는 위치 권한 체크/요청 필요
-    // 예시: 강남역 좌표 (37.4979, 127.0276)
-    // 위치 기반 푸시는 플랫폼별 geolocator 등 활용
-    // 아래는 로직 예시 (실제 위치 연동 필요)
-    final userLat = 37.4979; // 예시값
-    final userLng = 127.0276;
-    final dist = _distance(userLat, userLng, 37.4979, 127.0276);
-    if (dist < 0.5) {
-      await FirebaseMessaging.instance.requestPermission();
-      await FirebaseMessaging.instance.subscribeToTopic('gangnam');
-      // 서버에서 topic push 발송 필요
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    
+    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+      try {
+        final position = await Geolocator.getCurrentPosition();
+        final userLat = position.latitude;
+        final userLng = position.longitude;
+        
+        // Example logic: checking if user is within 500m of Gangnam station
+        final dist = _distance(userLat, userLng, 37.4979, 127.0276); 
+        if (dist < 0.5) {
+          await FirebaseMessaging.instance.requestPermission();
+          await FirebaseMessaging.instance.subscribeToTopic('gangnam');
+        }
+      } catch (e) {
+        debugPrint('Location error: $e');
+      }
     }
   }
 
@@ -131,6 +144,65 @@ class _MapScreenState extends State<MapScreen> {
     ];
   }
 
+  Drawer _buildDrawer() {
+    final user = FirebaseAuth.instance.currentUser;
+    return Drawer(
+      child: FutureBuilder<DocumentSnapshot>(
+        future: user != null 
+            ? FirebaseFirestore.instance.collection('users').doc(user.uid).get()
+            : Future.value(null),
+        builder: (context, snapshot) {
+          String name = user?.displayName ?? '사용자';
+          String email = user?.email ?? '';
+          String carNumber = '등록된 차량 없음';
+
+          if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+            final data = snapshot.data!.data() as Map<String, dynamic>?;
+            if (data != null) {
+              name = data['name'] ?? name;
+              carNumber = data['carNumber'] ?? carNumber;
+            }
+          }
+
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: Text(name),
+                accountEmail: Text(email),
+                currentAccountPicture: const CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, size: 40, color: Colors.blueGrey),
+                ),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.directions_car),
+                title: const Text('내 차량 번호'),
+                subtitle: Text(carNumber),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.redAccent),
+                title: const Text('로그아웃', style: TextStyle(color: Colors.redAccent)),
+                onTap: () async {
+                  await AuthService().signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
@@ -139,6 +211,7 @@ class _MapScreenState extends State<MapScreen> {
           title: const Text('스팟쉐어 지도'),
           actions: _buildNavActions(),
         ),
+        drawer: _buildDrawer(),
         body: Stack(
           children: [
             WebKakaoMap(
@@ -164,13 +237,15 @@ class _MapScreenState extends State<MapScreen> {
         title: const Text('스팟쉐어 지도'),
         actions: _buildNavActions(),
       ),
+      drawer: _buildDrawer(),
       body: Stack(
         children: [
           KakaoMap(
             onMapCreated: (controller) {
               _mapController = controller;
-              // 클러스터러 예시 (kakao_map_plugin 문서 참고)
-              // controller.addClusterer(...)
+              if (markers.isNotEmpty) {
+                _mapController.addClusterer(Clusterer(markers: markers.toList()));
+              }
             },
             markers: markers.toList(),
             center: markers.isNotEmpty

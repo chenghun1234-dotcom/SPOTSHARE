@@ -81,7 +81,9 @@ service cloud.firestore {
     }
 
     match /ad_requests/{adRequestId} {
-      allow read: if resource.data.status == 'active' || isAdmin();
+      allow read: if resource.data.status == 'active'
+        || isAdmin()
+        || isOwnerField(resource.data, 'userId');
 
       allow create: if signedIn() && validAdRequestCreate();
 

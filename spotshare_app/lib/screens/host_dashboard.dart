@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/parking_spot.dart';
 import '../services/ad_service.dart';
 import '../services/parking_spot_service.dart';
-import '../services/toss_service.dart';
 
 class HostDashboard extends StatefulWidget {
   const HostDashboard({super.key});
@@ -45,29 +43,51 @@ class _HostDashboardState extends State<HostDashboard> {
       return;
     }
 
-    final adminBank = dotenv.env['AD_ADMIN_BANK'] ?? '토스뱅크';
-    final adminAccountNo = dotenv.env['AD_ADMIN_ACCOUNT_NO'] ?? '0000-0000-0000';
-
     setState(() => _submitting = true);
     try {
-      final depositCode = await _adService.requestAd(
+      final response = await _adService.createAdVirtualAccount(
         spotId: _selectedSpotId!,
         durationDays: durationDays,
         amount: amount,
-        adminBank: adminBank,
-        adminAccountNo: adminAccountNo,
-      );
-
-      await TossService.openTossForAd(
-        bank: adminBank,
-        accountNo: adminAccountNo,
-        amount: amount,
-        depositCode: depositCode,
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('광고 신청 완료. 입금코드: $depositCode (입금 확인 후 자동/수동 승인)')),
+      final virtualAccount = Map<String, dynamic>.from(
+        (response['virtualAccount'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
+      );
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('가상계좌 발급 완료'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('주문번호: ${response['orderId'] ?? '-'}'),
+                const SizedBox(height: 8),
+                Text('상태: ${response['status'] ?? '-'}'),
+                const SizedBox(height: 8),
+                Text('은행 코드: ${virtualAccount['bankCode'] ?? '-'}'),
+                const SizedBox(height: 8),
+                Text('가상계좌: ${virtualAccount['accountNumber'] ?? '-'}'),
+                const SizedBox(height: 8),
+                Text('입금자명: ${virtualAccount['customerName'] ?? '-'}'),
+                const SizedBox(height: 8),
+                Text('입금기한: ${virtualAccount['dueDate'] ?? '-'}'),
+                const SizedBox(height: 8),
+                const Text('입금 완료 시 토스 webhook으로 자동 승인됩니다.'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('확인'),
+              ),
+            ],
+          );
+        },
       );
     } catch (e) {
       if (!mounted) return;
@@ -112,7 +132,7 @@ class _HostDashboardState extends State<HostDashboard> {
 
               _selectedSpotId ??= spots.first.id;
               return DropdownButtonFormField<String>(
-                value: _selectedSpotId,
+                initialValue: _selectedSpotId,
                 decoration: const InputDecoration(labelText: '광고 대상 주차장'),
                 items: spots
                     .map((spot) => DropdownMenuItem<String>(
@@ -147,7 +167,7 @@ class _HostDashboardState extends State<HostDashboard> {
             height: 44,
             child: ElevatedButton(
               onPressed: _submitting ? null : _requestAndPay,
-              child: Text(_submitting ? '처리 중...' : '광고 신청 + 토스 송금 열기'),
+              child: Text(_submitting ? '처리 중...' : '광고 신청 + 가상계좌 발급'),
             ),
           ),
           const SizedBox(height: 24),
@@ -180,11 +200,14 @@ class _HostDashboardState extends State<HostDashboard> {
                   final status = data['status']?.toString() ?? 'unknown';
                   final amount = data['amount']?.toString() ?? '-';
                   final duration = data['durationDays']?.toString() ?? '-';
-                  final code = data['depositCode']?.toString() ?? '-';
+                  final orderId = data['orderId']?.toString() ?? '-';
+                  final accountNumber = (data['virtualAccount'] is Map)
+                      ? data['virtualAccount']['accountNumber']?.toString() ?? '-'
+                      : '-';
                   return Card(
                     child: ListTile(
                       title: Text('상태: $status / ${amount}원 / ${duration}일'),
-                      subtitle: Text('입금코드: $code | spotId: ${data['spotId']}'),
+                      subtitle: Text('주문번호: $orderId | 가상계좌: $accountNumber | spotId: ${data['spotId']}'),
                     ),
                   );
                 }).toList(),

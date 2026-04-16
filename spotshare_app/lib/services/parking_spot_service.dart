@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/parking_spot.dart';
+import 'error_handler.dart';
 
 class ParkingSpotService {
   final spotsRef = FirebaseFirestore.instance.collection('parking_spots');
@@ -14,39 +15,54 @@ class ParkingSpotService {
   }
 
   Future<void> addSpot(ParkingSpot spot) async {
-    final ownerId = _requireUserId();
-    await spotsRef.doc(spot.id).set({
-      'ownerId': ownerId,
-      'region': spot.region,
-      'title': spot.title,
-      'price': spot.price,
-      'bank': spot.bank,
-      'accountNo': spot.accountNo,
-      'depositCode': spot.depositCode,
-      'isPremium': spot.isPremium,
-      'imageUrl': spot.imageUrl,
-      'lat': spot.lat,
-      'lng': spot.lng,
-    });
+    try {
+      final ownerId = _requireUserId();
+      await spotsRef.doc(spot.id).set({
+        'ownerId': ownerId,
+        'region': spot.region,
+        'title': spot.title,
+        'price': spot.price,
+        'bank': spot.bank,
+        'accountNo': spot.accountNo,
+        'depositCode': spot.depositCode,
+        'isPremium': spot.isPremium,
+        'imageUrl': spot.imageUrl,
+        'lat': spot.lat,
+        'lng': spot.lng,
+      });
+    } catch (e) {
+      ErrorHandler.showError('주차 영역 등록에 실패했습니다: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateSpot(ParkingSpot spot) async {
-    await spotsRef.doc(spot.id).update({
-      'region': spot.region,
-      'title': spot.title,
-      'price': spot.price,
-      'bank': spot.bank,
-      'accountNo': spot.accountNo,
-      'depositCode': spot.depositCode,
-      'isPremium': spot.isPremium,
-      'imageUrl': spot.imageUrl,
-      'lat': spot.lat,
-      'lng': spot.lng,
-    });
+    try {
+      await spotsRef.doc(spot.id).update({
+        'region': spot.region,
+        'title': spot.title,
+        'price': spot.price,
+        'bank': spot.bank,
+        'accountNo': spot.accountNo,
+        'depositCode': spot.depositCode,
+        'isPremium': spot.isPremium,
+        'imageUrl': spot.imageUrl,
+        'lat': spot.lat,
+        'lng': spot.lng,
+      });
+    } catch (e) {
+      ErrorHandler.showError('주차 영역 수정에 실패했습니다: $e');
+      rethrow;
+    }
   }
 
   Future<void> deleteSpot(String id) async {
-    await spotsRef.doc(id).delete();
+    try {
+      await spotsRef.doc(id).delete();
+    } catch (e) {
+      ErrorHandler.showError('주차 영역 삭제에 실패했습니다: $e');
+      rethrow;
+    }
   }
 
   Stream<List<ParkingSpot>> getSpotsStream() {
