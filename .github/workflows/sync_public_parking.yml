@@ -1,0 +1,60 @@
+# .github/workflows/sync_public_parking.yml
+#
+# 📅 매주 월요일 00:00 KST (일요일 UTC 15:00) 에 자동 실행
+# 🔧 수동 실행: GitHub Actions 탭 → "Run workflow" 버튼
+#
+# 필수 GitHub Secrets 설정 (Settings → Secrets → Actions):
+#   SYNC_SECRET_TOKEN : Firebase Function 호출 인증 토큰 (자유롭게 생성)
+#   FIREBASE_FUNCTION_URL : 배포된 HTTP 함수 URL
+#     예) https://asia-northeast3-spotshare-5103d.cloudfunctions.net/syncPublicParking
+
+name: 🅿️ Sync Public Parking Data
+
+on:
+  schedule:
+    - cron: '0 15 * * 0'   # UTC 15:00 일요일 = KST 00:00 월요일
+  workflow_dispatch:        # 수동 실행 허용
+
+jobs:
+  sync:
+    name: Trigger Public Parking Sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🚀 Call Firebase Sync Function
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_SECRET_TOKEN }}
+          FUNCTION_URL: ${{ secrets.FIREBASE_FUNCTION_URL }}
+        run: |
+          echo "📡 공영주차장 동기화 함수 호출 중..."
+
+          RESPONSE=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST "$FUNCTION_URL" \
+            -H "Authorization: Bearer $SYNC_TOKEN" \
+            -H "Content-Type: application/json" \
+            --max-time 600)
+
+          echo "HTTP Status: $RESPONSE"
+          echo "Response Body:"
+          cat response.json
+
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "❌ 동기화 실패: HTTP $RESPONSE"
+            exit 1
+          fi
+
+          echo "✅ 동기화 성공!"
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          echo "## 🅿️ 공영주차장 데이터 동기화 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f response.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat response.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "실행 시각: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')" >> $GITHUB_STEP_SUMMARY

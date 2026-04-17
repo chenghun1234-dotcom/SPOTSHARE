@@ -1,0 +1,27 @@
+{
+"DESCRIPTION" : {"PAKING_AREA":"면수","PSTN":"위 치","SN":"연번","PAKING_NM":"주차장명"},
+"DATA" : [
+{"pstn":"도봉로 13길 73-1","sn":1,"paking_nm":"영신","paking_area":11},
+{"pstn":"도봉로 14","sn":2,"paking_nm":"대성","paking_area":16},
+{"pstn":"인수봉로 145-3","sn":3,"paking_nm":"화계","paking_area":49},
+{"pstn":"번동 413-248","sn":4,"paking_nm":"북부시장","paking_area":8},
+{"pstn":"도봉로13가길 9-18","sn":5,"paking_nm":"숭인","paking_area":38},
+{"pstn":"노해로 25","sn":6,"paking_nm":"대명","paking_area":16},
+{"pstn":"삼양로173길 21","sn":7,"paking_nm":"도선사","paking_area":50},
+{"pstn":"삼양로173길 223","sn":8,"paking_nm":"청소년수련(할렐루야기도원)","paking_area":43},
+{"pstn":"미아동 70-26외 2","sn":9,"paking_nm":"롯데백화점","paking_area":40},
+{"pstn":"솔샘로 244","sn":10,"paking_nm":"동북","paking_area":10},
+{"pstn":"수유동 178-4345","sn":11,"paking_nm":"예일","paking_area":23},
+{"pstn":"도봉로 375","sn":12,"paking_nm":"하늘빌딩","paking_area":5},
+{"pstn":"미아동 62-23외 2","sn":13,"paking_nm":"새한빌딩주차장","paking_area":20},
+{"pstn":"삼양로 162","sn":14,"paking_nm":"솔샘","paking_area":15},
+{"pstn":"도봉로 97-1(미아8동 374-6)","sn":15,"paking_nm":"오케이파킹","paking_area":20},
+{"pstn":"수유4동 586-2","sn":16,"paking_nm":"쉼터 나무아래","paking_area":4},
+{"pstn":"월계로 3(미아4동 42-11)","sn":17,"paking_nm":"GS파크24","paking_area":21},
+{"pstn":"수유동 2-26","sn":18,"paking_nm":"노외주차장","paking_area":8},
+{"pstn":"번동 418-25,29","sn":19,"paking_nm":"노스페이스 아웃도어 문화센터주차장","paking_area":51},
+{"pstn":"미아8동 322-19,22","sn":20,"paking_nm":"햇빛병원 산후조리원","paking_area":8},
+{"pstn":"번동 118-13","sn":21,"paking_nm":"노외주차장","paking_area":1},
+{"pstn":"우이동 189-2","sn":22,"paking_nm":"백운주차장","paking_area":5}
+]
+}

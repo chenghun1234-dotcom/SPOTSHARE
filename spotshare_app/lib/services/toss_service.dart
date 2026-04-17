@@ -1,7 +1,7 @@
 import 'package:url_launcher/url_launcher.dart';
 
 class TossService {
-  static Future<void> openTossForAd({
+  static Future<void> openTossTransfer({
     required String bank,
     required String accountNo,
     required int amount,

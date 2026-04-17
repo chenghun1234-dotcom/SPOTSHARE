@@ -69,7 +69,7 @@ class _WebKakaoMapState extends State<WebKakaoMap> {
   }
 
   Future<void> _initializeKakaoMap() async {
-    final kakaoJsKey = dotenv.env['KAKAO_JS_KEY'] ?? const String.fromEnvironment('KAKAO_JS_KEY', defaultValue: '');
+    final kakaoJsKey = dotenv.env['KAKAO_JS_KEY'] ?? const String.fromEnvironment('KAKAO_JS_KEY', defaultValue: '3cd29c9d5d9313c116fa1f9048fba176');
     if (kakaoJsKey.isEmpty) {
       setState(() {
         _errorMessage = 'KAKAO_JS_KEY가 설정되지 않았습니다. spotshare_app/.env를 확인하세요.';

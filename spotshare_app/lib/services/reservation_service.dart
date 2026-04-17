@@ -27,4 +27,26 @@ class ReservationService {
       (snapshot) => snapshot.docs.map((doc) => doc.data()).toList()
     );
   }
+
+  Future<String?> getActiveReservationId(String spotId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final query = await reservationsRef
+        .where('userId', isEqualTo: user.uid)
+        .where('spotId', isEqualTo: spotId)
+        .where('checkedOut', isEqualTo: false)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+    return query.docs.first.id;
+  }
+
+  Future<void> certifyCheckout(String id, String imageUrl) async {
+    await reservationsRef.doc(id).update({
+      'checkedOut': true,
+      'checkoutImageUrl': imageUrl,
+      'checkedOutAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

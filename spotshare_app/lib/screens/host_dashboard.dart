@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/parking_spot.dart';
 import '../services/ad_service.dart';
 import '../services/parking_spot_service.dart';
+import 'host_spot_registration_screen.dart';
 
 class HostDashboard extends StatefulWidget {
   const HostDashboard({super.key});
@@ -127,7 +128,7 @@ class _HostDashboardState extends State<HostDashboard> {
                 );
               }
               if (spots.isEmpty) {
-                return const Text('등록된 내 주차장이 없습니다. 주차장 등록 후 광고 신청이 가능합니다.');
+                return const Text('등록된 내 주차장이 없습니다. 우측 하단의 [+] 버튼을 눌러 주차장을 등록해주세요.');
               }
 
               _selectedSpotId ??= spots.first.id;
@@ -215,6 +216,15 @@ class _HostDashboardState extends State<HostDashboard> {
             },
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const HostSpotRegistrationScreen()),
+          );
+        },
+        icon: const Icon(Icons.add_location_alt),
+        label: const Text('주차장 인증/등록'),
       ),
     );
   }

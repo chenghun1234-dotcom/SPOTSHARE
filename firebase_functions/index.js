@@ -706,3 +706,8 @@ exports.onReservationUpdated = functions.firestore
     }
     return null;
   });
+
+// ── 공영주차장 공공데이터 동기화 ─────────────────────────────────
+const { scheduledPublicParkingSync, syncPublicParking } = require('./sync_public_parking');
+exports.scheduledPublicParkingSync = scheduledPublicParkingSync;
+exports.syncPublicParking          = syncPublicParking;
