@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp();
+// admin.initializeApp() is handled in index.js
 
 // 하루(24시간) 지난 출차 인증 이미지 자동 삭제
 exports.cleanupCheckoutImages = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {

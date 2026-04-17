@@ -711,3 +711,9 @@ exports.onReservationUpdated = functions.firestore
 const { scheduledPublicParkingSync, syncPublicParking } = require('./sync_public_parking');
 exports.scheduledPublicParkingSync = scheduledPublicParkingSync;
 exports.syncPublicParking          = syncPublicParking;
+
+// ── 시스템 유지관리 (이미지 및 광고 관리) ──────────────────────────
+const { cleanupCheckoutImages } = require('./cleanup_checkout_images');
+const { cleanupExpiredAds }     = require('./cron_handler');
+exports.cleanupCheckoutImages   = cleanupCheckoutImages;
+exports.cleanupExpiredAds       = cleanupExpiredAds;
