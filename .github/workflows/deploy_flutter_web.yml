@@ -23,10 +23,9 @@ jobs:
 
       - name: ⚙️ Process Static Parking Data
         run: |
-          touch spotshare_app/.env # Create placeholder for assets
+          touch spotshare_app/.env
           python scripts/process_parking_data.py
-          mkdir -p spotshare_app/web/data
-          # Copy to dist folder for the script's output, and also to Flutter web assets
+          mkdir -p spotshare_app/web
           cp dist/parking_data.json spotshare_app/web/parking_data.json
 
       - name: 💙 Set up Flutter
@@ -39,6 +38,8 @@ jobs:
           cd spotshare_app
           flutter pub get
           flutter build web --release --web-renderer canvaskit
+          # CRITICAL: Copy data to build folder AFTER Flutter build clears/populates it
+          cp ../dist/parking_data.json build/web/parking_data.json
 
       - name: 🚀 Deploy to Firebase Hosting
         uses: w9jds/firebase-action@v13.7.2
