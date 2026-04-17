@@ -54,7 +54,7 @@ class StaticDataService {
       final Map<String, dynamic> data = json.decode(jsonString);
       final List<dynamic> spotsJson = data['spots'] ?? [];
       
-      return spotsJson.map((s) {
+      return spotsJson.map<ParkingSpot>((s) {
         // Map static format to ParkingSpot model
         return ParkingSpot(
           id: 'static_${s['title']}_${s['lat']}',
@@ -70,6 +70,10 @@ class StaticDataService {
           priceUnit: '시간',
           penaltyRate: 0,
           imageUrl: '',
+          bank: '',
+          accountNo: '',
+          depositCode: '',
+          type: s['type'] ?? 'PUBLIC',
         );
       }).toList();
     } catch (e) {

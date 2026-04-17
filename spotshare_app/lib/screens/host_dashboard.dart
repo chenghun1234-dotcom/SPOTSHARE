@@ -133,7 +133,7 @@ class _HostDashboardState extends State<HostDashboard> {
 
               _selectedSpotId ??= spots.first.id;
               return DropdownButtonFormField<String>(
-                initialValue: _selectedSpotId,
+                value: _selectedSpotId,
                 decoration: const InputDecoration(labelText: '광고 대상 주차장'),
                 items: spots
                     .map((spot) => DropdownMenuItem<String>(
