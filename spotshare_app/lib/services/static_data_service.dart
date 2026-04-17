@@ -1,34 +1,26 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../models/parking_spot.dart';
 
 class StaticDataService {
   static const String _lastUpdateKey = 'static_data_last_update';
+  static const String _cachedDataKey = 'static_data_cache';
   // Note: Replace with your actual GitHub Pages URL after deployment
   static const String _defaultUrl = 'https://chenghun1234-dotcom.github.io/SPOTSHARE/parking_data.json';
 
-  Future<String> get _localPath async {
-    final directory = await getApplicationDocumentsDirectory();
-    return directory.path;
-  }
-
-  Future<File> get _localFile async {
-    final path = await _localPath;
-    return File('$path/static_parking_data.json');
-  }
-
   /// Fetches data from GitHub and caches it locally.
-  /// If skipDownload is true, it only returns cached data if available.
   Future<List<ParkingSpot>> loadStaticSpots({bool forceRefresh = false}) async {
-    final file = await _localFile;
+    final prefs = await SharedPreferences.getInstance();
     
-    if (!forceRefresh && await file.exists()) {
-      debugPrint('Loading static data from local cache');
-      return _parseJson(await file.readAsString());
+    // Check cache first
+    if (!forceRefresh) {
+      final cachedJson = prefs.getString(_cachedDataKey);
+      if (cachedJson != null) {
+        debugPrint('Loading static data from local cache (Web compatible)');
+        return _parseJson(cachedJson);
+      }
     }
 
     try {
@@ -37,22 +29,22 @@ class StaticDataService {
       
       if (response.statusCode == 200) {
         final content = response.body;
-        await file.writeAsString(content);
         
-        final prefs = await SharedPreferences.getInstance();
+        // Save to preferences (Web/Mobile compatible)
+        await prefs.setString(_cachedDataKey, content);
         await prefs.setString(_lastUpdateKey, DateTime.now().toIso8601String());
         
         return _parseJson(content);
       } else {
-        debugPrint('Failed to fetch from GitHub (Status: ${response.statusCode}). Using cache if exists.');
+        debugPrint('Failed to fetch from GitHub (Status: ${response.statusCode}).');
       }
     } catch (e) {
       debugPrint('Error fetching static data: $e');
     }
 
-    if (await file.exists()) {
-      return _parseJson(await file.readAsString());
-    }
+    // Final fallback to older cache
+    final fallbackJson = prefs.getString(_cachedDataKey);
+    if (fallbackJson != null) return _parseJson(fallbackJson);
     
     return [];
   }
