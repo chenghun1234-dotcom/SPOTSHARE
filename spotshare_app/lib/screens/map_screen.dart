@@ -39,34 +39,44 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadMarkers() async {
-    // 1. Load Dynamic Spots from Firestore
-    final snapshot = await FirebaseFirestore.instance.collection('parking_spots').get();
-    final dynamicSpots = snapshot.docs.map(_spotFromDoc).toList();
+    // 1. Load Dynamic Spots from Firestore (Safely)
+    List<ParkingSpot> dynamicSpots = [];
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('parking_spots').get();
+      dynamicSpots = snapshot.docs.map(_spotFromDoc).toList();
+      debugPrint('Firestore spots loaded: ${dynamicSpots.length}');
+    } catch (e) {
+      debugPrint('Firestore data loading failed: $e');
+    }
     
     // 2. Load Static Spots from GitHub/Cache
     List<ParkingSpot> staticSpots = [];
     try {
       staticSpots = await StaticDataService().loadStaticSpots();
+      debugPrint('Static spots loaded: ${staticSpots.length}');
     } catch (e) {
       debugPrint('Error loading static spots: $e');
     }
 
-    setState(() {
-      // Combine spots
-      spots = [
-        ...dynamicSpots.where((s) => s.isActive),
-        ...staticSpots,
-      ];
+    if (mounted) {
+      setState(() {
+        // Combine spots
+        spots = [
+          ...dynamicSpots.where((s) => s.isActive),
+          ...staticSpots,
+        ];
+        debugPrint('Total spots to render: ${spots.length}');
 
-      markers = spots.map((spot) {
-        return Marker(
-          markerId: spot.id,
-          latLng: LatLng(spot.lat, spot.lng),
-          width: spot.isPremium ? 45 : 30,
-          height: spot.isPremium ? 45 : 30,
-        );
-      }).whereType<Marker>().toSet();
-    });
+        markers = spots.map((spot) {
+          return Marker(
+            markerId: spot.id,
+            latLng: LatLng(spot.lat, spot.lng),
+            width: spot.isPremium ? 45 : 30,
+            height: spot.isPremium ? 45 : 30,
+          );
+        }).whereType<Marker>().toSet();
+      });
+    }
   }
 
   ParkingSpot _spotFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
