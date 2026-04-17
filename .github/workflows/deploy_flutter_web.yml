@@ -23,6 +23,7 @@ jobs:
 
       - name: ⚙️ Process Static Parking Data
         run: |
+          touch spotshare_app/.env # Create placeholder for assets
           python scripts/process_parking_data.py
           mkdir -p spotshare_app/web/data
           # Copy to dist folder for the script's output, and also to Flutter web assets
