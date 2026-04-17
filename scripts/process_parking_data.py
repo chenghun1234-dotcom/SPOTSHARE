@@ -28,7 +28,6 @@ def load_data(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     try:
         if ext == '.csv':
-            # Try different encodings common in Korea
             for encoding in ['utf-8', 'cp949', 'euc-kr']:
                 try:
                     return pd.read_csv(file_path, encoding=encoding)
@@ -36,13 +35,6 @@ def load_data(file_path):
                     continue
         elif ext in ['.xlsx', '.xls']:
             return pd.read_excel(file_path)
-        elif ext == '.json':
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                if isinstance(data, list):
-                    return pd.DataFrame(data)
-                elif 'records' in data:
-                    return pd.DataFrame(data['records'])
     except Exception as e:
         print(f"Error loading {file_path}: {e}")
     return None
@@ -55,52 +47,38 @@ def process_all():
         os.makedirs(output_dir)
         
     all_spots = []
-    
     files = glob.glob(os.path.join(data_dir, '*.*'))
     print(f"Found {len(files)} files in {data_dir}")
     
     for file in files:
         df = load_data(file)
-        if df is None:
-            continue
-            
-        # Re-map columns
-        df = df.rename(columns=lambda x: COLUMN_MAPPING.get(x.strip(), x.strip()))
+        if df is None: continue
         
-        # Keep only necessary columns if they exist
+        df = df.rename(columns=lambda x: COLUMN_MAPPING.get(x.strip(), x.strip()))
         required = ['title', 'lat', 'lng']
         if not all(col in df.columns for col in required):
-            print(f"Skipping {file}: Missing required columns {set(required) - set(df.columns)}")
+            print(f"Skipping {file}: Missing required columns")
             continue
             
-        # Convert to numeric lat/lng
         df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
         df['lng'] = pd.to_numeric(df['lng'], errors='coerce')
-        
-        # Clean data
         df = df.dropna(subset=['lat', 'lng', 'title'])
         df = df[(df['lat'] != 0) & (df['lng'] != 0)]
         
-        # Ensure optional columns exist
         for col in ['fee', 'type', 'address', 'info']:
-            if col not in df.columns:
-                df[col] = ''
+            if col not in df.columns: df[col] = ''
                 
-        # Simplify type
         def simplify_type(t):
             t = str(t).upper()
             if '공영' in t or 'PUBLIC' in t: return 'PUBLIC'
             if '무료' in t or 'FREE' in t: return 'FREE'
             return 'PRIVATE'
-            
         df['type'] = df['type'].apply(simplify_type)
         
-        # Convert to list of dicts
         records = df[['title', 'lat', 'lng', 'fee', 'type', 'address', 'info']].to_dict('records')
         all_spots.extend(records)
         print(f"Processed {len(records)} spots from {file}")
 
-    # Deduplicate by Title + Lat/Lng with small offset
     unique_spots = []
     seen = set()
     for s in all_spots:
@@ -109,11 +87,13 @@ def process_all():
             seen.add(key)
             unique_spots.append(s)
             
-    # Output JSON
     output_path = os.path.join(output_dir, 'parking_data.json')
     df_final = pd.DataFrame(unique_spots)
+    
+    # NaN -> null conversion for JSON validity
     df_final = df_final.replace({np.nan: None})
-    df_final['fee'] = pd.to_numeric(df_final['fee'], errors='coerce').fillna(0).astype(int)
+    if 'fee' in df_final.columns:
+        df_final['fee'] = pd.to_numeric(df_final['fee'], errors='coerce').fillna(0).astype(int)
     
     spots = []
     for _, row in df_final.iterrows():
@@ -122,7 +102,7 @@ def process_all():
             "lat": float(row['lat']) if row['lat'] else 0.0,
             "lng": float(row['lng']) if row['lng'] else 0.0,
             "address": str(row['address']) if row['address'] else "",
-            "fee": int(row['fee']),
+            "fee": int(row['fee']) if 'fee' in row else 0,
             "type": str(row['type']) if row['type'] else "PUBLIC",
             "info": str(row['info']) if row['info'] else ""
         })
