@@ -2,6 +2,7 @@ import os
 import json
 import pandas as pd
 import glob
+import numpy as np
 
 # Normalize column names based on common variations in Korean public data
 COLUMN_MAPPING = {
