@@ -85,6 +85,7 @@ def process_all():
             unique_spots.append(s)
             
     output_path = os.path.join(output_dir, 'parking_data.json')
+    version_path = os.path.join(output_dir, 'version.json')
     
     json_spots = []
     for spot in unique_spots:
@@ -121,17 +122,27 @@ def process_all():
             "info": to_clean_str(spot.get('info'))
         })
 
+    # Save timestamp info for versioning
+    current_time = pd.Timestamp.now().isoformat()
+
+    # 1. Main Data File
     with open(output_path, 'w', encoding='utf-8') as f:
-        # allow_nan=False will raise an error if any NaN slips through, 
-        # preventing us from ever deploying a broken file again.
         json.dump({
             'version': 1,
-            'updatedAt': pd.Timestamp.now().isoformat(),
+            'updatedAt': current_time,
             'totalCount': len(json_spots),
             'spots': json_spots
         }, f, ensure_ascii=False, indent=2, allow_nan=False)
+
+    # 2. Small Version File
+    with open(version_path, 'w', encoding='utf-8') as f:
+        json.dump({
+            'version': 1,
+            'updatedAt': current_time,
+            'totalCount': len(json_spots)
+        }, f, ensure_ascii=False, indent=2)
         
-    print(f"Successfully generated {output_path} with {len(json_spots)} unique spots.")
+    print(f"Successfully generated {output_path} and {version_path}")
 
 if __name__ == "__main__":
     process_all()

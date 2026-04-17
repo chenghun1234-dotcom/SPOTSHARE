@@ -49,14 +49,14 @@ class _MapScreenState extends State<MapScreen> {
       debugPrint('Firestore data loading failed: $e');
     }
     
-    // 2. Load Static Spots from GitHub/Cache
+    // 2. Load Static Spots from IndexedDB/Cache
     List<ParkingSpot> staticSpots = [];
     String debugMsg = '';
     try {
       final allStatic = await StaticDataService().loadStaticSpots();
-      // Performance Limit: Take first 1000 for verification
-      staticSpots = allStatic.take(1000).toList();
-      debugMsg = 'Static: ${allStatic.length} (Showing ${staticSpots.length})';
+      // NO LIMIT: Now using Clusterer for 10k+ scalability
+      staticSpots = allStatic;
+      debugMsg = 'Static: ${allStatic.length} (Clustering Active)';
       debugPrint(debugMsg);
     } catch (e) {
       debugMsg = 'Static Load Error: $e';
