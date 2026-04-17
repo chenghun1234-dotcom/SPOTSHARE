@@ -66,67 +66,70 @@ def process_all():
         
         for col in ['fee', 'type', 'address', 'info']:
             if col not in df.columns: df[col] = ''
-                
-        def simplify_type(t):
-            t = str(t).upper()
-            if '공영' in t or 'PUBLIC' in t: return 'PUBLIC'
-            if '무료' in t or 'FREE' in t: return 'FREE'
-            return 'PRIVATE'
-        df['type'] = df['type'].apply(simplify_type)
         
-        records = df[['title', 'lat', 'lng', 'fee', 'type', 'address', 'info']].to_dict('records')
-        all_spots.extend(records)
-        print(f"Processed {len(records)} spots from {file}")
+        # Convert all to list of dicts for faster iteration
+        df_records = df[['title', 'lat', 'lng', 'fee', 'type', 'address', 'info']].values.tolist()
+        cols = ['title', 'lat', 'lng', 'fee', 'type', 'address', 'info']
+        
+        for row in df_records:
+            spot = dict(zip(cols, row))
+            all_spots.append(spot)
+        print(f"Processed {len(df_records)} spots from {file}")
 
     unique_spots = []
     seen = set()
     for s in all_spots:
-        key = (s['title'], round(s['lat'], 4), round(s['lng'], 4))
+        key = (str(s['title']), round(float(s['lat']), 4), round(float(s['lng']), 4))
         if key not in seen:
             seen.add(key)
             unique_spots.append(s)
             
     output_path = os.path.join(output_dir, 'parking_data.json')
-    df_final = pd.DataFrame(unique_spots)
     
     json_spots = []
-    for _, row in df_final.iterrows():
-        # Extremely robust cleaning
-        def clean_val(val, default=''):
-            if pd.isna(val) or val is None: return default
-            return str(val)
+    for spot in unique_spots:
+        # Extremely aggressive NaN filtering to prevent JSON corruption
+        def to_clean_str(val):
+            if pd.isna(val) or val is None: return ""
+            s = str(val).strip()
+            if s.lower() == 'nan': return ""
+            return s
 
-        def clean_num(val, default=0.0):
+        def to_clean_num(val, default=0.0):
             try:
                 v = pd.to_numeric(val, errors='coerce')
-                return float(v) if not pd.isna(v) else default
+                if pd.isna(v): return default
+                return float(v)
             except:
                 return default
 
-        def clean_int(val, default=0):
+        def to_clean_int(val, default=0):
             try:
                 v = pd.to_numeric(val, errors='coerce')
-                return int(v) if not pd.isna(v) else default
+                if pd.isna(v): return default
+                return int(v)
             except:
                 return default
 
         json_spots.append({
-            "title": clean_val(row['title'], 'Unknown'),
-            "lat": clean_num(row['lat']),
-            "lng": clean_num(row['lng']),
-            "address": clean_val(row['address'], ""),
-            "fee": clean_int(row.get('fee', 0)),
-            "type": clean_val(row['type'], "PUBLIC"),
-            "info": clean_val(row['info'], "")
+            "title": to_clean_str(spot.get('title', 'Unknown')),
+            "lat": to_clean_num(spot.get('lat')),
+            "lng": to_clean_num(spot.get('lng')),
+            "address": to_clean_str(spot.get('address')),
+            "fee": to_clean_int(spot.get('fee')),
+            "type": to_clean_str(spot.get('type', 'PUBLIC')),
+            "info": to_clean_str(spot.get('info'))
         })
 
     with open(output_path, 'w', encoding='utf-8') as f:
+        # allow_nan=False will raise an error if any NaN slips through, 
+        # preventing us from ever deploying a broken file again.
         json.dump({
             'version': 1,
             'updatedAt': pd.Timestamp.now().isoformat(),
             'totalCount': len(json_spots),
             'spots': json_spots
-        }, f, ensure_ascii=False, indent=2)
+        }, f, ensure_ascii=False, indent=2, allow_nan=False)
         
     print(f"Successfully generated {output_path} with {len(json_spots)} unique spots.")
 
