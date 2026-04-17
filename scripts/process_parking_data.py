@@ -29,7 +29,7 @@ def load_data(file_path):
         if ext == '.csv':
             for encoding in ['utf-8', 'cp949', 'euc-kr']:
                 try:
-                    return pd.read_csv(file_path, encoding=encoding)
+                    return pd.read_csv(file_path, encoding=encoding, low_memory=False)
                 except:
                     continue
         elif ext in ['.xlsx', '.xls']:
@@ -87,25 +87,37 @@ def process_all():
             unique_spots.append(s)
             
     output_path = os.path.join(output_dir, 'parking_data.json')
-    # Use pandas native null handling to avoid numpy dependency
     df_final = pd.DataFrame(unique_spots)
     
-    # Clean data using native pandas / pure python to avoid NaN in JSON
     json_spots = []
     for _, row in df_final.iterrows():
-        # Handle NaN/None for each field explicitly
+        # Extremely robust cleaning
         def clean_val(val, default=''):
-            if pd.isna(val): return default
-            return val
+            if pd.isna(val) or val is None: return default
+            return str(val)
+
+        def clean_num(val, default=0.0):
+            try:
+                v = pd.to_numeric(val, errors='coerce')
+                return float(v) if not pd.isna(v) else default
+            except:
+                return default
+
+        def clean_int(val, default=0):
+            try:
+                v = pd.to_numeric(val, errors='coerce')
+                return int(v) if not pd.isna(v) else default
+            except:
+                return default
 
         json_spots.append({
-            "title": str(clean_val(row['title'], 'Unknown')),
-            "lat": float(clean_val(row['lat'], 0.0)),
-            "lng": float(clean_val(row['lng'], 0.0)),
-            "address": str(clean_val(row['address'], "")),
-            "fee": int(pd.to_numeric(row['fee'], errors='coerce') if not pd.isna(row['fee']) else 0),
-            "type": str(clean_val(row['type'], "PUBLIC")),
-            "info": str(clean_val(row['info'], ""))
+            "title": clean_val(row['title'], 'Unknown'),
+            "lat": clean_num(row['lat']),
+            "lng": clean_num(row['lng']),
+            "address": clean_val(row['address'], ""),
+            "fee": clean_int(row.get('fee', 0)),
+            "type": clean_val(row['type'], "PUBLIC"),
+            "info": clean_val(row['info'], "")
         })
 
     with open(output_path, 'w', encoding='utf-8') as f:

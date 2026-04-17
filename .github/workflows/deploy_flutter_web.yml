@@ -23,10 +23,13 @@ jobs:
 
       - name: ⚙️ Process Static Parking Data
         run: |
-          touch spotshare_app/.env
-          python scripts/process_parking_data.py
-          mkdir -p spotshare_app/web
-          cp dist/parking_data.json spotshare_app/web/parking_data.json
+          mkdir -p dist
+          # Only run process if JSON is missing, otherwise use the pre-generated one from the repo
+          if [ ! -f dist/parking_data.json ]; then
+            python scripts/process_parking_data.py
+          fi
+          # Ensure file is in build/web for Firebase Hosting to find it
+          cp dist/parking_data.json spotshare_app/web/parking_data.json 2>/dev/null || :
 
       - name: 💙 Set up Flutter
         uses: subosito/flutter-action@v2
