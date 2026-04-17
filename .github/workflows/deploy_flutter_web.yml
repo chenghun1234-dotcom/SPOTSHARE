@@ -24,27 +24,32 @@ jobs:
       - name: ⚙️ Process Static Parking Data
         run: |
           mkdir -p dist
+          # Create dummy .env inside spotshare_app to satisfy pubspec.yaml
+          touch spotshare_app/.env
           # Only run process if JSON is missing, otherwise use the pre-generated one from the repo
           if [ ! -f dist/parking_data.json ]; then
             python scripts/process_parking_data.py
           fi
-          # Ensure file is in build/web for Firebase Hosting to find it
-          cp dist/parking_data.json spotshare_app/web/parking_data.json 2>/dev/null || :
 
       - name: 💙 Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
 
-      - name: 🏗️ Build Web App
+      - name: 💙 Build Flutter Web
         run: |
           cd spotshare_app
           flutter pub get
           flutter build web --release --web-renderer canvaskit
-          # CRITICAL: Copy data to build folder AFTER Flutter build clears/populates it
-          cp ../dist/parking_data.json build/web/parking_data.json
 
-      - name: 🚀 Deploy to Firebase Hosting
+      - name: 📦 Finalize Deployment Bundle
+        run: |
+          mkdir -p spotshare_app/build/web
+          cp dist/parking_data.json spotshare_app/build/web/parking_data.json
+          # Double check file is there
+          ls -l spotshare_app/build/web/parking_data.json
+
+      - name: 🔥 Deploy to Firebase
         uses: w9jds/firebase-action@v13.7.2
         with:
           args: deploy --only hosting
