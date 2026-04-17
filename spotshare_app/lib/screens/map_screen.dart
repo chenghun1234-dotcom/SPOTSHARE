@@ -51,11 +51,16 @@ class _MapScreenState extends State<MapScreen> {
     
     // 2. Load Static Spots from GitHub/Cache
     List<ParkingSpot> staticSpots = [];
+    String debugMsg = '';
     try {
-      staticSpots = await StaticDataService().loadStaticSpots();
-      debugPrint('Static spots loaded: ${staticSpots.length}');
+      final allStatic = await StaticDataService().loadStaticSpots();
+      // Performance Limit: Take first 1000 for verification
+      staticSpots = allStatic.take(1000).toList();
+      debugMsg = 'Static: ${allStatic.length} (Showing ${staticSpots.length})';
+      debugPrint(debugMsg);
     } catch (e) {
-      debugPrint('Error loading static spots: $e');
+      debugMsg = 'Static Load Error: $e';
+      debugPrint(debugMsg);
     }
 
     if (mounted) {
@@ -65,7 +70,8 @@ class _MapScreenState extends State<MapScreen> {
           ...dynamicSpots.where((s) => s.isActive),
           ...staticSpots,
         ];
-        debugPrint('Total spots to render: ${spots.length}');
+        
+        _loadingStatus = debugMsg;
 
         markers = spots.map((spot) {
           return Marker(
@@ -282,6 +288,8 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  String _loadingStatus = 'Loading data...';
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -297,6 +305,22 @@ class _MapScreenState extends State<MapScreen> {
                 WebKakaoMap(
                   spots: spots,
                   onSpotTap: (spot) => setState(() => selectedSpot = spot),
+                ),
+                // Debug Overlay
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _loadingStatus,
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
                 ),
                 _buildMapOverlay(),
               ],
