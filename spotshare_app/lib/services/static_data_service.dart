@@ -12,40 +12,43 @@ class StaticDataService {
 
   /// Fetches data from GitHub and caches it locally.
   Future<List<ParkingSpot>> loadStaticSpots({bool forceRefresh = false}) async {
+    // Web: Skip SharedPreferences cache to avoid QuotaExceededError for large datasets
+    if (kIsWeb) {
+      try {
+        debugPrint('Fetching static data (Web direct): $_defaultUrl');
+        final response = await http.get(Uri.parse(_defaultUrl)).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) return _parseJson(response.body);
+      } catch (e) {
+        debugPrint('Error fetching static data on Web: $e');
+      }
+      return [];
+    }
+
     final prefs = await SharedPreferences.getInstance();
     
-    // Check cache first
+    // Mobile: Check cache first
     if (!forceRefresh) {
       final cachedJson = prefs.getString(_cachedDataKey);
       if (cachedJson != null) {
-        debugPrint('Loading static data from local cache (Web compatible)');
+        debugPrint('Loading static data from local cache');
         return _parseJson(cachedJson);
       }
     }
 
     try {
-      debugPrint('Fetching static data from GitHub: $_defaultUrl');
       final response = await http.get(Uri.parse(_defaultUrl)).timeout(const Duration(seconds: 15));
-      
       if (response.statusCode == 200) {
         final content = response.body;
-        
-        // Save to preferences (Web/Mobile compatible)
         await prefs.setString(_cachedDataKey, content);
         await prefs.setString(_lastUpdateKey, DateTime.now().toIso8601String());
-        
         return _parseJson(content);
-      } else {
-        debugPrint('Failed to fetch from GitHub (Status: ${response.statusCode}).');
       }
     } catch (e) {
-      debugPrint('Error fetching static data: $e');
+      debugPrint('Error: $e');
     }
-
-    // Final fallback to older cache
+    
     final fallbackJson = prefs.getString(_cachedDataKey);
     if (fallbackJson != null) return _parseJson(fallbackJson);
-    
     return [];
   }
 

@@ -110,15 +110,31 @@ def process_all():
             
     # Output JSON
     output_path = os.path.join(output_dir, 'parking_data.json')
+    df_final = pd.DataFrame(unique_spots)
+    df_final = df_final.replace({np.nan: None})
+    df_final['fee'] = pd.to_numeric(df_final['fee'], errors='coerce').fillna(0).astype(int)
+    
+    spots = []
+    for _, row in df_final.iterrows():
+        spots.append({
+            "title": str(row['title']) if row['title'] else "Unknown",
+            "lat": float(row['lat']) if row['lat'] else 0.0,
+            "lng": float(row['lng']) if row['lng'] else 0.0,
+            "address": str(row['address']) if row['address'] else "",
+            "fee": int(row['fee']),
+            "type": str(row['type']) if row['type'] else "PUBLIC",
+            "info": str(row['info']) if row['info'] else ""
+        })
+
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump({
             'version': 1,
             'updatedAt': pd.Timestamp.now().isoformat(),
-            'totalCount': len(unique_spots),
-            'spots': unique_spots
+            'totalCount': len(spots),
+            'spots': spots
         }, f, ensure_ascii=False, indent=2)
         
-    print(f"Successfully generated {output_path} with {len(unique_spots)} unique spots.")
+    print(f"Successfully generated {output_path} with {len(spots)} unique spots.")
 
 if __name__ == "__main__":
     process_all()
