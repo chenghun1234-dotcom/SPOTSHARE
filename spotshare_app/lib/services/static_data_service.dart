@@ -7,8 +7,8 @@ import '../models/parking_spot.dart';
 class StaticDataService {
   static const String _lastUpdateKey = 'static_data_last_update';
   static const String _cachedDataKey = 'static_data_cache';
-  // Note: Replace with your actual GitHub Pages URL after deployment
-  static const String _defaultUrl = 'https://chenghun1234-dotcom.github.io/SPOTSHARE/parking_data.json';
+  // Centralized Firebase-hosted data source
+  static const String _defaultUrl = 'https://spotshare-5103d.web.app/parking_data.json';
 
   /// Fetches data from GitHub and caches it locally.
   Future<List<ParkingSpot>> loadStaticSpots({bool forceRefresh = false}) async {

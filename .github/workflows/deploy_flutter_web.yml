@@ -11,17 +11,35 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Flutter
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install Data Dependencies
+        run: pip install pandas openpyxl
+
+      - name: ⚙️ Process Static Parking Data
+        run: |
+          python scripts/process_parking_data.py
+          mkdir -p spotshare_app/web/data
+          # Copy to dist folder for the script's output, and also to Flutter web assets
+          cp dist/parking_data.json spotshare_app/web/parking_data.json
+
+      - name: 💙 Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
-      - name: Build Web
+          flutter-version: '3.22.0'
+
+      - name: 🏗️ Build Web App
         run: |
           cd spotshare_app
           flutter pub get
-          flutter build web --release
-      - name: Deploy to Firebase Hosting
+          flutter build web --release --web-renderer canvaskit
+
+      - name: 🚀 Deploy to Firebase Hosting
         uses: w9jds/firebase-action@v13.7.2
         with:
           args: deploy --only hosting
