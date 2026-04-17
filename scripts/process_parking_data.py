@@ -2,7 +2,6 @@ import os
 import json
 import pandas as pd
 import glob
-import numpy as np
 
 # Normalize column names based on common variations in Korean public data
 COLUMN_MAPPING = {
@@ -88,34 +87,36 @@ def process_all():
             unique_spots.append(s)
             
     output_path = os.path.join(output_dir, 'parking_data.json')
+    # Use pandas native null handling to avoid numpy dependency
     df_final = pd.DataFrame(unique_spots)
     
-    # NaN -> null conversion for JSON validity
-    df_final = df_final.replace({np.nan: None})
-    if 'fee' in df_final.columns:
-        df_final['fee'] = pd.to_numeric(df_final['fee'], errors='coerce').fillna(0).astype(int)
-    
-    spots = []
+    # Clean data using native pandas / pure python to avoid NaN in JSON
+    json_spots = []
     for _, row in df_final.iterrows():
-        spots.append({
-            "title": str(row['title']) if row['title'] else "Unknown",
-            "lat": float(row['lat']) if row['lat'] else 0.0,
-            "lng": float(row['lng']) if row['lng'] else 0.0,
-            "address": str(row['address']) if row['address'] else "",
-            "fee": int(row['fee']) if 'fee' in row else 0,
-            "type": str(row['type']) if row['type'] else "PUBLIC",
-            "info": str(row['info']) if row['info'] else ""
+        # Handle NaN/None for each field explicitly
+        def clean_val(val, default=''):
+            if pd.isna(val): return default
+            return val
+
+        json_spots.append({
+            "title": str(clean_val(row['title'], 'Unknown')),
+            "lat": float(clean_val(row['lat'], 0.0)),
+            "lng": float(clean_val(row['lng'], 0.0)),
+            "address": str(clean_val(row['address'], "")),
+            "fee": int(pd.to_numeric(row['fee'], errors='coerce') if not pd.isna(row['fee']) else 0),
+            "type": str(clean_val(row['type'], "PUBLIC")),
+            "info": str(clean_val(row['info'], ""))
         })
 
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump({
             'version': 1,
             'updatedAt': pd.Timestamp.now().isoformat(),
-            'totalCount': len(spots),
-            'spots': spots
+            'totalCount': len(json_spots),
+            'spots': json_spots
         }, f, ensure_ascii=False, indent=2)
         
-    print(f"Successfully generated {output_path} with {len(spots)} unique spots.")
+    print(f"Successfully generated {output_path} with {len(json_spots)} unique spots.")
 
 if __name__ == "__main__":
     process_all()
